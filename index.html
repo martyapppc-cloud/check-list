@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>嘉明湖三天兩夜檢查表</title>
+<style>
+/* ===== 第二層：CSS 外觀。改這裡的顏色就能換風格 ===== */
+:root {
+  --bg:#f4f7f2; --card:#ffffff; --text:#1d2b22; --sub:#6a7a6f;
+  --line:#e1e8e0; --main:#2f7d4f; --main-soft:#dff0e5; --warn:#c2562b;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#111a14; --card:#1a261e; --text:#e6efe8; --sub:#93a498;
+    --line:#2a3a2f; --main:#5bbf82; --main-soft:#1f3a2a; --warn:#e8845a;
+  }
+}
+html { scroll-padding-top:env(safe-area-inset-top,0px); }
+body { margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; }
+main { max-width:520px; margin:auto; padding:16px 14px 90px; }
+h1 { font-size:22px; margin:8px 0 2px; }
+.sub { color:var(--sub); font-size:14px; margin:0 0 14px; }
+.top { position:sticky; top:env(safe-area-inset-top,0px); background:var(--bg); padding:8px 0 10px; z-index:5; }
+.bar { height:12px; background:var(--line); border-radius:99px; overflow:hidden; }
+.bar > div { height:100%; width:0; background:var(--main); transition:width .3s; }
+.stat { display:flex; justify-content:space-between; font-size:14px; margin-top:6px; color:var(--sub); }
+.stat b { color:var(--main); font-size:16px; }
+.tools { display:flex; gap:8px; margin:8px 0 4px; }
+button { font:inherit; border:1px solid var(--line); background:var(--card); color:var(--text);
+  padding:8px 12px; border-radius:10px; cursor:pointer; }
+button.on { background:var(--main); color:#fff; border-color:var(--main); }
+section { background:var(--card); border-radius:14px; margin:12px 0; border:1px solid var(--line); overflow:hidden; }
+section h2 { margin:0; padding:12px 14px; font-size:16px; display:flex; justify-content:space-between; cursor:pointer; }
+section h2 span { font-weight:normal; color:var(--sub); font-size:14px; }
+section.done h2 span { color:var(--main); font-weight:bold; }
+label { display:flex; align-items:flex-start; gap:12px; padding:13px 14px; border-top:1px solid var(--line); font-size:17px; }
+label small { display:block; color:var(--sub); font-size:13px; margin-top:2px; }
+input[type=checkbox] { width:24px; height:24px; accent-color:var(--main); flex:none; margin:0; }
+label.ok { color:var(--sub); }
+label.ok b { text-decoration:line-through; font-weight:normal; }
+.hide { display:none; }
+.add { display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--line); }
+.add input { flex:1; font:inherit; padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); min-width:0; }
+.del { margin-left:auto; color:var(--warn); border:none; background:none; padding:0 4px; }
+.note { color:var(--sub); font-size:13px; line-height:1.6; margin-top:18px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>⛰️ 嘉明湖三天兩夜檢查表</h1>
+    <p class="sub">勾選會自動記在這支手機上</p>
+    <div class="bar"><div id="fill"></div></div>
+    <div class="stat"><span>已準備 <b id="n">0</b> / <span id="total">0</span></span><span id="pct">0%</span></div>
+    <div class="tools">
+      <button id="onlyTodo">只看未完成</button>
+      <button id="reset">全部重置</button>
+    </div>
+  </div>
+  <div id="list"></div>
+  <p class="note">行程參考：D1 登山口→向陽山屋，D2 三叉山→嘉明湖，D3 下山。<br>
+  入園入山許可、山屋床位、水源與天氣請以官方最新公告為準，出發前再確認一次。</p>
+</main>
+
+<script>
+/* ===== 第三層：JavaScript 功能 =====
+   想增減項目：只要改下面 DATA。格式是「名稱|備註」。 */
+const DATA = [
+  { t:"📄 證件與許可", items:[
+    "入園／入山許可|截圖或列印，沒訊號也要看得到",
+    "山屋床位確認|確認日期與人數",
+    "身分證、健保卡",
+    "少量現金|零錢，山下補給用",
+    "行程交給家人|路線、日期、下山時間" ]},
+  { t:"🎒 背負與睡眠", items:[
+    "登山背包 45–55L",
+    "背包防水內袋／套|下雨必備",
+    "睡袋|依季節挑保暖等級",
+    "睡墊／充氣墊|視山屋狀況",
+    "輕便拖鞋|山屋內穿" ]},
+  { t:"🧥 衣物（洋蔥式穿法）", items:[
+    "排汗內衣褲",
+    "保暖中層（刷毛）",
+    "羽絨或化纖保暖外套|稜線和夜晚很冷",
+    "防風防水外套",
+    "雨褲",
+    "襪子 2–3 雙|含一雙乾淨睡覺用",
+    "毛帽、手套",
+    "遮陽帽、太陽眼鏡" ]},
+  { t:"🥾 鞋與行走裝備", items:[
+    "登山鞋|先穿過，不要新鞋上山",
+    "登山杖",
+    "頭燈＋備用電池|每天出發很早",
+    "護膝",
+    "綁腿|可選" ]},
+  { t:"🍙 飲食與炊具", items:[
+    "飲水 2–3L|出發前確認沿途水源",
+    "行動糧／能量膠／堅果",
+    "三天份正餐|扣掉山屋提供的",
+    "瓦斯罐＋爐頭",
+    "鍋具、餐具",
+    "保溫瓶＋熱飲",
+    "電解質粉／鹽錠" ]},
+  { t:"🩹 安全與急救", items:[
+    "急救包（含水泡處理）",
+    "個人藥品",
+    "哨子、求生毯",
+    "離線地圖／軌跡檔|下載好，不依賴訊號",
+    "行動電源＋線",
+    "防曬乳、護唇膏",
+    "垃圾袋、衛生紙|垃圾全部帶下山",
+    "雨具備用／塑膠袋|分裝防潮" ]},
+  { t:"📍 出發前一晚", items:[
+    "查天氣預報|有大雨強風就考慮改期",
+    "手機充飽電",
+    "交通接駁確認|往返登山口",
+    "背包秤重打包完成" ]}
+];
+
+const KEY = "jiaming-checklist-v1";
+let state = { checked:{}, custom:[], onlyTodo:false, collapsed:{} };
+
+// 讀取／儲存（瀏覽器的 localStorage，關掉網頁也不會消失）
+function load(){ try { const s = localStorage.getItem(KEY); if (s) state = Object.assign(state, JSON.parse(s)); } catch(e){} }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+
+function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function allCats(){
+  const cats = DATA.map((c,ci) => ({ t:c.t, items:c.items.map((s,i) => {
+    const [name, note] = s.split("|"); return { id:ci+"-"+i, name, note }; }) }));
+  cats.push({ t:"✏️ 我的自訂", custom:true, items:state.custom.map(x => ({ id:x.id, name:x.name, custom:true })) });
+  return cats;
+}
+
+function render(){
+  const cats = allCats();
+  let done = 0, total = 0;
+  const html = cats.map((c,ci) => {
+    const d = c.items.filter(i => state.checked[i.id]).length;
+    done += d; total += c.items.length;
+    const rows = c.items.map(i => {
+      const ok = !!state.checked[i.id];
+      const hidden = (state.onlyTodo && ok) || state.collapsed[ci] ? " hide" : "";
+      return `<label class="${ok?"ok":""}${hidden}"><input type="checkbox" data-id="${i.id}" ${ok?"checked":""}>
+        <div><b>${esc(i.name)}</b>${i.note?`<small>${esc(i.note)}</small>`:""}</div>
+        ${i.custom?`<button class="del" data-del="${i.id}">刪除</button>`:""}</label>`;
+    }).join("");
+    const add = c.custom ? `<div class="add${state.collapsed[ci]?" hide":""}"><input id="newItem" placeholder="新增項目，例如：相機">
+        <button id="addBtn">新增</button></div>` : "";
+    return `<section class="${c.items.length && d===c.items.length?"done":""}">
+      <h2 data-fold="${ci}">${c.t}<span>${d}/${c.items.length}</span></h2>${rows}${add}</section>`;
+  }).join("");
+  document.getElementById("list").innerHTML = html;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById("n").textContent = done;
+  document.getElementById("total").textContent = total;
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("fill").style.width = pct + "%";
+  document.getElementById("onlyTodo").classList.toggle("on", state.onlyTodo);
+}
+
+// 事件：用「事件委派」，一個監聽器處理所有勾選與按鈕
+document.addEventListener("change", e => {
+  if (e.target.dataset.id) { state.checked[e.target.dataset.id] = e.target.checked; save(); render(); }
+});
+document.addEventListener("click", e => {
+  const t = e.target;
+  if (t.dataset.fold !== undefined) { state.collapsed[t.dataset.fold] = !state.collapsed[t.dataset.fold]; save(); render(); }
+  if (t.dataset.del) { state.custom = state.custom.filter(x => x.id !== t.dataset.del); delete state.checked[t.dataset.del]; save(); render(); }
+  if (t.id === "addBtn") addItem();
+  if (t.id === "onlyTodo") { state.onlyTodo = !state.onlyTodo; save(); render(); }
+  if (t.id === "reset" && confirm("確定要清除所有勾選嗎？")) { state.checked = {}; save(); render(); }
+});
+document.addEventListener("keydown", e => { if (e.target.id === "newItem" && e.key === "Enter") addItem(); });
+function addItem(){
+  const v = document.getElementById("newItem").value.trim();
+  if (!v) return;
+  state.custom.push({ id:"c"+Date.now(), name:v }); save(); render();
+}
+
+load(); render();
+</script>
+</body>
+</html>
